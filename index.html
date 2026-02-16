@@ -1,1 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My AI Image Generator</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 40px; background-color: #f0f2f5; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1 { color: #0070f3; }
+        input { padding: 12px; width: 80%; border: 2px solid #ddd; border-radius: 8px; margin-bottom: 15px; outline: none; transition: border 0.3s; }
+        input:focus { border-color: #0070f3; }
+        button { padding: 12px 25px; background-color: #0070f3; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        button:disabled { background-color: #ccc; }
+        #status { margin-top: 20px; font-weight: bold; color: #555; }
+        #imageResult { margin-top: 20px; width: 100%; border-radius: 10px; display: none; }
+    </style>
+</head>
+<body>
 
+<div class="container">
+    <h1>🍌 Nano Banana AI</h1>
+    <p>Enter a prompt to generate an image:</p>
+    
+    <input type="text" id="promptInput" placeholder="A cozy cabin in the snowy mountains...">
+    <br>
+    <button id="genBtn" onclick="startGeneration()">Generate Image</button>
+
+    <div id="status"></div>
+    <img id="imageResult" src="" alt="AI Generated Image">
+</div>
+
+<script>
+    // This is your specific Vercel link
+    const VERCEL_URL = "https://my-ai-brain-two.vercel.app";
+
+    async function startGeneration() {
+        const prompt = document.getElementById('promptInput').value;
+        const btn = document.getElementById('genBtn');
+        const statusDiv = document.getElementById('status');
+        const imgDisplay = document.getElementById('imageResult');
+
+        if (!prompt) return alert("Please type something first!");
+
+        // UI Reset
+        btn.disabled = true;
+        imgDisplay.style.display = "none";
+        statusDiv.innerText = "🚀 Sending prompt to the AI brain...";
+
+        try {
+            // STEP 1: Ask Vercel to start the task
+            const response = await fetch(`${VERCEL_URL}/api/generate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: prompt })
+            });
+
+            const data = await response.json();
+            const requestId = data.request_id;
+
+            if (!requestId) throw new Error("Could not start task");
+
+            statusDiv.innerText = "🎨 AI is painting... (takes about 15-20 seconds)";
+
+            // STEP 2: Wait 15 seconds (Simple version for your first app)
+            // Most AI images take between 12-18 seconds to finish
+            setTimeout(async () => {
+                statusDiv.innerText = "✨ Fetching your masterpiece...";
+                
+                try {
+                    // STEP 3: Try to get the result using the ID
+                    const resultResponse = await fetch(`https://model-api.runcomfy.net/v1/requests/${requestId}/result`);
+                    const resultData = await resultResponse.json();
+
+                    if (resultData.outputs && resultData.outputs[0]) {
+                        imgDisplay.src = resultData.outputs[0];
+                        imgDisplay.style.display = "block";
+                        statusDiv.innerText = "✅ Done!";
+                    } else {
+                        statusDiv.innerText = "⏳ Still processing... click generate again in 5 seconds.";
+                    }
+                } catch (e) {
+                    statusDiv.innerText = "❌ Could not load image. Try again?";
+                }
+                btn.disabled = false;
+            }, 18000); // 18 seconds wait
+
+        } catch (error) {
+            console.error(error);
+            statusDiv.innerText = "❌ Error: " + error.message;
+            btn.disabled = false;
+        }
+    }
+</script>
+
+</body>
+</html>
